@@ -1,46 +1,23 @@
-import Fastify from "fastify";
-import fastifySwagger from "@fastify/swagger";
-import fastifySwaggerUi from "@fastify/swagger-ui";
-import root from "./routes/root";
+import Fastify from 'fastify';
+import { authRoutes } from './routes/auth.route';
+import { env } from './config/env';
 
+const app = Fastify({
+  logger: true
+});
 
-export async function createApp() {
-  const app = Fastify({
-    logger: true,
-  });
+// Register routes
+app.register(authRoutes);
 
-  await app.register(fastifySwagger, {
-      swagger: {
-        info: {
-          title: "Joylo API",
-          description: "Documentation for the Joylo backend services",
-          version: "1.0.0",
-        },
-        tags: [{ name: "Auth", description: "Authentication related endpoints" }],
-      },
-    });
+// Global error handler
+app.setErrorHandler((error, request, reply) => {
+  app.log.error(error);
+  reply.status(500).send({ error: 'Something went wrong!' });
+});
 
-  await app.register(fastifySwaggerUi, {
-      routePrefix: "/docs",
-      uiConfig: {
-        docExpansion: "list",
-        deepLinking: true,
-      },
-      staticCSP: true,
-      transformSpecification: (swaggerObject, request, reply) => {
-        return swaggerObject;
-      },
-      transformSpecificationClone: true,
-    });
+// Health check endpoint
+app.get('/api/health', async (request, reply) => {
+  return { status: 'OK', message: 'Server is running' };
+});
 
-  // Register routes
-  app.register(root, { prefix: "/" });
-
-  // Global error handler
-  app.setErrorHandler((error, request, reply) => {
-    app.log.error(error);
-    reply.status(500).send({ error: "Internal Server Error" });
-  });
-
-  return app;
-}
+export default app;
